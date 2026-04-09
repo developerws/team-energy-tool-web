@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>团队精力看板</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="app-header">
+  <div class="app-title">
+    <h1>团队精力看板</h1>
+    <p>任务精力管理 · 每日上限 2任务 / 5分 · 双击任务条编辑进度</p>
+  </div>
+  <div class="header-right">
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#d1fae5;border:1.5px solid #10b981"></div>轻松</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fef3c7;border:1.5px solid #f59e0b"></div>适中</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ffedd5;border:1.5px solid #f97316"></div>繁忙</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fee2e2;border:1.5px solid #ef4444"></div>过载</div>
+    </div>
+    <div class="view-toggle">
+      <button id="btn-view-week" class="view-btn active">周</button>
+      <button id="btn-view-month" class="view-btn">月</button>
+    </div>
+    <div class="week-nav">
+      <button id="btn-prev">‹</button>
+      <span class="week-label" id="week-label"></span>
+      <button id="btn-next">›</button>
+      <button class="today-btn" id="btn-today">今天</button>
+    </div>
+    <button class="export-btn" id="btn-export" title="导出数据为 JSON 文件">↓ 导出备份</button>
+    <button class="import-btn" id="btn-import" title="从 JSON 文件导入数据">↑ 导入恢复</button>
+    <input type="file" id="import-file" accept=".json" style="display:none" />
+    <button class="reset-btn" id="btn-reset" title="清空所有数据并恢复示例">↺ 重置</button>
+  </div>
+</div>
+
+<!-- ── Overview Panel ── -->
+<div class="overview-panel">
+  <div class="ov-toggle" id="ov-toggle">
+    <span>团队总览</span>
+    <em class="ov-arrow" id="ov-arrow">▾</em>
+  </div>
+  <div class="ov-body" id="ov-body" style="display:none"></div>
+</div>
+
+<!-- ── Board ── -->
+<div class="gantt-board" id="board"></div>
+<button class="add-member-btn" id="btn-add-member">＋ 新增成员</button>
+
+<!-- ── Add Task Modal ── -->
+<div class="overlay" id="task-modal" style="display:none">
+  <div class="modal">
+    <div class="modal-title">新增任务 <span class="modal-who" id="task-who"></span></div>
+    <div class="field">
+      <label>任务名称</label>
+      <input id="f-name" type="text" placeholder="例：需求评审 / 迭代开发…" />
+    </div>
+    <div class="field-row">
+      <div class="field"><label>开始</label><select id="f-start"></select></div>
+      <div class="field"><label>结束</label><select id="f-end"></select></div>
+    </div>
+    <span id="suggest-date-hint" class="suggest-date-hint" style="display:none"></span>
+    <div class="field">
+      <label>任务难度（每日占用分值）</label>
+      <div class="diff-btns">
+        <button class="diff-btn" data-d="simple"><span class="d-name">简单</span><span class="d-pts">1 分 / 天</span></button>
+        <button class="diff-btn active" data-d="normal"><span class="d-name">普通</span><span class="d-pts">3 分 / 天</span></button>
+        <button class="diff-btn" data-d="hard"><span class="d-name">困难</span><span class="d-pts">5 分 / 天</span></button>
+      </div>
+    </div>
+    <div class="constraint-box" id="constraint-box">
+      <p>⚠ 约束提醒（仍可添加）</p>
+      <div id="constraint-items"></div>
+    </div>
+    <div class="field">
+      <label>颜色</label>
+      <div class="swatches" id="swatches"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-no" id="task-cancel">取消</button>
+      <button class="btn-ok" id="task-ok">添加任务</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit Task Modal ── -->
+<div class="overlay" id="edit-modal" style="display:none">
+  <div class="modal edit-modal">
+    <div class="modal-title">编辑任务 <span class="modal-who" id="edit-who"></span></div>
+    <div class="field">
+      <label>任务名称</label>
+      <input id="e-name" type="text" />
+    </div>
+    <div class="field">
+      <label>完成进度</label>
+      <div class="prog-presets" id="prog-presets">
+        <button class="prog-btn" data-p="0">0%</button>
+        <button class="prog-btn" data-p="25">25%</button>
+        <button class="prog-btn" data-p="50">50%</button>
+        <button class="prog-btn" data-p="75">75%</button>
+        <button class="prog-btn done" data-p="100">✓ 完成</button>
+      </div>
+      <div class="prog-slider-row">
+        <input type="range" id="e-prog" min="0" max="100" step="5" />
+        <span class="prog-display" id="e-prog-display">0%</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-no" id="edit-cancel">取消</button>
+      <button class="btn-ok" id="edit-ok">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Misc Modal ── -->
+<div class="overlay" id="misc-modal" style="display:none">
+  <div class="modal misc-modal">
+    <div class="modal-title">杂事管理 <span class="modal-who" id="misc-who"></span></div>
+    <div class="misc-list" id="misc-list"></div>
+    <div class="misc-total" id="misc-total"></div>
+    <div class="field">
+      <label>新增占用时长</label>
+      <div class="hour-btns" id="hour-btns">
+        <button class="hour-btn active" data-h="0.5">0.5h</button>
+        <button class="hour-btn" data-h="1">1h</button>
+        <button class="hour-btn" data-h="1.5">1.5h</button>
+        <button class="hour-btn" data-h="2">2h</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>事项备注（可选）</label>
+      <input id="misc-note-input" type="text" placeholder="代码审查 / 临时会议…" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn-no" id="misc-close">关闭</button>
+      <button class="btn-ok" id="misc-add">添加杂事</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add Member Modal ── -->
+<div class="overlay" id="member-modal" style="display:none">
+  <div class="modal" style="width:340px">
+    <div class="modal-title">新增成员</div>
+    <div class="field">
+      <label>姓名</label>
+      <input id="nm-name" type="text" placeholder="成员姓名" maxlength="20" />
+    </div>
+    <div class="field">
+      <label>角色</label>
+      <input id="nm-role" type="text" placeholder="职位 / 职责（可选）" maxlength="30" />
+    </div>
+    <div class="field">
+      <label>头像颜色</label>
+      <div id="nm-palettes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-no" id="nm-cancel">取消</button>
+      <button class="btn-ok" id="nm-ok">添加成员</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Task Tooltip ── -->
+<div id="task-tooltip" class="task-tooltip"></div>
+
+<script src="js/constants.js"></script>
+<script src="js/state.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/overview.js"></script>
+<script src="js/render.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/drag.js"></script>
+<script src="js/modal-task.js"></script>
+<script src="js/modal-edit.js"></script>
+<script src="js/modal-misc.js"></script>
+<script src="js/modal-member.js"></script>
+<script src="js/toolbar.js"></script>
+</body>
+</html>
