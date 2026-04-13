@@ -44,12 +44,15 @@ function render() {
   members.forEach(m => {
     const mTasks = tasks.filter(t => {
       if (t.mid !== m.id) return false;
-      const rawAbsS = taskAbsS(t), rawAbsE = taskAbsE(t);
-      // Shift task position relative to the current view week so tasks
-      // created in a different week don't stay fixed at the same columns.
-      const weekDelta = t.wo - weekOff;
-      const absS = rawAbsS - weekDelta * 5;
-      const absE = rawAbsE - weekDelta * 5;
+      let absS = taskAbsS(t), absE = taskAbsE(t);
+      // In week view, shift task coordinates relative to the current view week
+      // so tasks from other weeks don't appear at wrong columns.
+      // In month view, dayAbsMap is based on actual dates, so no shift needed.
+      if (viewMode === 'week') {
+        const weekDelta = t.wo - weekOff;
+        absS -= weekDelta * 5;
+        absE -= weekDelta * 5;
+      }
       if (absS > absMax || absE < absMin) return false;
       // 在当前视图中的可视起/止列索引
       t._visS = dayAbsMap.findIndex(a => a >= absS);
@@ -249,12 +252,16 @@ function bindBoardEvents() {
     bar.addEventListener("mousedown", e => {
       if (e.target.closest(".bar-del")||e.target.closest(".bar-resize")) return;
       e.preventDefault();
-      const colW = bar.closest(".bars-area").getBoundingClientRect().width / currentDays.length;
+      const barsArea = bar.closest(".bars-area");
+      const board = document.getElementById("board");
+      // Use actual day-slot width to handle month view grid overflow correctly
+      const slot = barsArea.querySelector(".day-slot");
+      const colW = slot ? slot.getBoundingClientRect().width : barsArea.getBoundingClientRect().width / currentDays.length;
       const task = tasks.find(t => t.id == bar.dataset.tid);
       if (!task) return;
       bar.classList.add("is-dragging");
       const absS = taskAbsS(task), absE = taskAbsE(task);
-      drag = { type:"move", taskId:task.id, initX:e.clientX, colW, initAbsS:absS, initAbsE:absE, span:absE-absS, previewAbsS:absS, previewAbsE:absE, moved:false, absMin: dayAbsMap[0], absMax: dayAbsMap[dayAbsMap.length - 1] };
+      drag = { type:"move", taskId:task.id, initX:e.clientX, colW, initAbsS:absS, initAbsE:absE, span:absE-absS, previewAbsS:absS, previewAbsE:absE, moved:false, absMin: dayAbsMap[0], absMax: dayAbsMap[dayAbsMap.length - 1], boardScroll: board.scrollLeft };
       document.body.classList.add("drag-move");
     });
     bar.addEventListener("dblclick", e => {
@@ -268,12 +275,15 @@ function bindBoardEvents() {
     handle.addEventListener("mousedown", e => {
       e.preventDefault(); e.stopPropagation();
       const bar  = handle.closest(".task-bar");
-      const colW = bar.closest(".bars-area").getBoundingClientRect().width / currentDays.length;
+      const barsArea  = handle.closest(".bars-area");
+      const board = document.getElementById("board");
+      const slot = barsArea.querySelector(".day-slot");
+      const colW = slot ? slot.getBoundingClientRect().width : barsArea.getBoundingClientRect().width / currentDays.length;
       const task = tasks.find(t => t.id == handle.dataset.tid);
       if (!task) return;
       bar.classList.add("is-dragging");
       const absS = taskAbsS(task), absE = taskAbsE(task);
-      drag = { type:"resize", taskId:task.id, initX:e.clientX, colW, initAbsS:absS, initAbsE:absE, previewAbsE:absE, moved:false, absMin: dayAbsMap[0], absMax: dayAbsMap[dayAbsMap.length - 1] };
+      drag = { type:"resize", taskId:task.id, initX:e.clientX, colW, initAbsS:absS, initAbsE:absE, previewAbsE:absE, moved:false, absMin: dayAbsMap[0], absMax: dayAbsMap[dayAbsMap.length - 1], boardScroll: board.scrollLeft };
       document.body.classList.add("drag-resize");
     });
   });
