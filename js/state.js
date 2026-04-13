@@ -13,7 +13,8 @@ let tid = 20;
 const miscTasks = {};
 members.forEach(m => { miscTasks[m.id] = {}; });
 let miscId = 100;
-let energyCaps = {};
+let energyCaps = {};   // per-day overrides: { mid: { dk: value } }
+let memberCaps = {};   // member-level default caps: { mid: value }
 let nextMemberId = 1;
 let nmPalIdx = 0;
 

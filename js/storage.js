@@ -3,7 +3,7 @@ function saveData() {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify({
       members: members.map(m => ({ id:m.id, name:m.name, role:m.role, av:m.av, color:m.color, bg:m.bg })),
-      tasks, miscTasks, tid, miscId, energyCaps, nextMemberId,
+      tasks, miscTasks, tid, miscId, energyCaps, memberCaps, nextMemberId,
     }));
   } catch(e) {}
 }
@@ -26,6 +26,7 @@ function loadData() {
     if (d.tid)           tid          = d.tid;
     if (d.miscId)        miscId       = d.miscId;
     if (d.energyCaps)    energyCaps   = d.energyCaps;
+    if (d.memberCaps)    memberCaps   = d.memberCaps;
     if (d.nextMemberId)  nextMemberId = d.nextMemberId;
   } catch(e) { console.warn("Load failed", e); }
 }
@@ -42,6 +43,6 @@ function resetData() {
   tasks.length = 0;
   tasks.push(...DEFAULT_TASKS.map(t => ({...t})));
   members.forEach(m => { miscTasks[m.id] = {}; });
-  tid = 20; miscId = 100; weekOff = 0; energyCaps = {}; nextMemberId = 1;
+  tid = 20; miscId = 100; weekOff = 0; energyCaps = {}; memberCaps = {}; nextMemberId = 1;
   render();
 }

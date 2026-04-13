@@ -44,7 +44,12 @@ function render() {
   members.forEach(m => {
     const mTasks = tasks.filter(t => {
       if (t.mid !== m.id) return false;
-      const absS = taskAbsS(t), absE = taskAbsE(t);
+      const rawAbsS = taskAbsS(t), rawAbsE = taskAbsE(t);
+      // Shift task position relative to the current view week so tasks
+      // created in a different week don't stay fixed at the same columns.
+      const weekDelta = t.wo - weekOff;
+      const absS = rawAbsS - weekDelta * 5;
+      const absE = rawAbsE - weekDelta * 5;
       if (absS > absMax || absE < absMin) return false;
       // 在当前视图中的可视起/止列索引
       t._visS = dayAbsMap.findIndex(a => a >= absS);
@@ -66,7 +71,10 @@ function render() {
           <div class="member-info">
             <span class="m-name" data-mid="${m.id}" data-field="name">${m.name}</span>
             <span class="m-role" data-mid="${m.id}" data-field="role">${m.role}</span>
-            <span class="edit-tip">双击编辑</span>
+            <span class="m-cap-row">
+              <span class="m-cap-badge${memberCaps[m.id] != null ? ' is-custom' : ''}" data-mid="${m.id}" title="点击调整默认精力上限">精力上限 ${getMemberEffectiveCap(m.id)}分</span>
+              <span class="edit-tip">双击编辑</span>
+            </span>
           </div>
           <button class="member-del-btn" data-mid="${m.id}" title="删除成员">×</button>
         </div>
@@ -101,7 +109,7 @@ function render() {
     html += `<div class="energy-row">
       <div class="energy-lbl">
         <span class="energy-lbl-title">精力分析</span>
-        <span class="energy-lbl-rule">正式≤${MAX_TASKS}任务<br>${MAX_PTS}分上限</span>
+        <span class="energy-lbl-rule">正式≤${MAX_TASKS}任务<br>${getMemberEffectiveCap(m.id)}分上限</span>
       </div>`;
     days.forEach((d, i) => {
       const dk     = dkey(d);
@@ -188,7 +196,7 @@ function bindBoardEvents() {
         const val = parseInt(inp.value);
         if (!isNaN(val) && val >= 1 && val <= 20) {
           if (!energyCaps[mid]) energyCaps[mid] = {};
-          if (val === MAX_PTS) {
+          if (val === getMemberEffectiveCap(mid)) {
             delete energyCaps[mid][dk];
             if (!Object.keys(energyCaps[mid]).length) delete energyCaps[mid];
           } else { energyCaps[mid][dk] = val; }
@@ -197,6 +205,31 @@ function bindBoardEvents() {
       };
       inp.addEventListener("blur", commit);
       inp.addEventListener("keydown", ev => { if(ev.key==="Enter"){ev.preventDefault();inp.blur();} if(ev.key==="Escape") render(); });
+    });
+  });
+
+  board.querySelectorAll(".m-cap-badge").forEach(badge => {
+    badge.addEventListener("click", e => {
+      e.stopPropagation();
+      const mid = badge.dataset.mid;
+      const input = document.createElement("input");
+      input.type = "number"; input.className = "cap-inp";
+      input.value = getMemberEffectiveCap(mid); input.min = 1; input.max = 20;
+      badge.replaceWith(input);
+      input.focus(); input.select();
+      const commit = () => {
+        const val = parseInt(input.value);
+        if (!isNaN(val) && val >= 1 && val <= 20) {
+          if (val === MAX_PTS) {
+            delete memberCaps[mid];
+          } else { memberCaps[mid] = val; }
+          render();
+        } else {
+          render();
+        }
+      };
+      input.addEventListener("blur", commit);
+      input.addEventListener("keydown", ev => { if(ev.key==="Enter"){ev.preventDefault();input.blur();} if(ev.key==="Escape") render(); });
     });
   });
 

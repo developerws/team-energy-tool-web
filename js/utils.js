@@ -56,7 +56,14 @@ function absToWoDay(abs) { const wo = Math.floor(abs / 5); return { wo, day: abs
 
 // ── Load Calculation ───────────────────────────────────────
 function getEffectiveCap(mid, dk) {
-  return (energyCaps[mid] && energyCaps[mid][dk] != null) ? energyCaps[mid][dk] : MAX_PTS;
+  if (energyCaps[mid] && energyCaps[mid][dk] != null) return energyCaps[mid][dk];
+  if (memberCaps[mid] != null) return memberCaps[mid];
+  return MAX_PTS;
+}
+
+function getMemberEffectiveCap(mid) {
+  if (memberCaps[mid] != null) return memberCaps[mid];
+  return MAX_PTS;
 }
 // 按绝对位置查询（render.js / overview.js 使用）
 function getDayLoadByAbs(mid, absDay, dk) {
